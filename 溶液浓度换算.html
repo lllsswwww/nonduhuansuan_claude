@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#3b82f6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="配液计算器">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>全能配液计算器 (稀释+固体+元素)</title>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --element-color: #ea580c;
+            --tertiary-color: #8b5cf6;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-color: #334155;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 650px;
+            margin: 0 auto;
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .tabs { display: flex; background-color: #f1f5f9; border-bottom: 1px solid var(--border-color); overflow-x: auto; }
+        .tab-btn { flex: 1; padding: 14px 4px; border: none; background: none; cursor: pointer; font-size: 0.95rem; font-weight: 600; color: #64748b; transition: all 0.2s; border-bottom: 3px solid transparent; white-space: nowrap; min-width: 80px; }
+        .tab-btn:hover { background-color: #e2e8f0; color: #1e293b; }
+        .tab-btn.active { background-color: var(--card-bg); color: var(--text-color); }
+        .tab-btn[data-target="liquid"].active { color: var(--primary-color); border-bottom-color: var(--primary-color); }
+        .tab-btn[data-target="solid"].active { color: var(--secondary-color); border-bottom-color: var(--secondary-color); }
+        .tab-btn[data-target="element"].active { color: var(--element-color); border-bottom-color: var(--element-color); }
+        .tab-btn[data-target="guide"].active { color: var(--tertiary-color); border-bottom-color: var(--tertiary-color); }
+
+        .tab-content { display: none; padding: 24px; animation: fadeIn 0.3s ease-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .input-group { margin-bottom: 16px; }
+        label { display: block; font-size: 0.9rem; font-weight: 600; color: #475569; margin-bottom: 6px; }
+        .input-wrapper { display: flex; gap: 8px; }
+        input[type="number"], input[type="text"] { flex: 2; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 1rem; outline: none; transition: border-color 0.2s; box-sizing: border-box; }
+        input[type="number"]:focus { border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.1); }
+        select { flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; background-color: white; font-size: 0.9rem; min-width: 90px; outline: none; box-sizing: border-box; }
+
+        .btn { width: 100%; padding: 14px; color: white; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 10px; transition: transform 0.1s; box-sizing: border-box; }
+        .btn:active { transform: scale(0.98); }
+        .btn-blue { background-color: var(--primary-color); }
+        .btn-green { background-color: var(--secondary-color); }
+        .btn-orange { background-color: var(--element-color); }
+
+        .result-box { margin-top: 24px; padding: 20px; border-radius: 12px; display: none; }
+        .res-blue { background-color: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a; }
+        .res-green { background-color: #ecfdf5; border: 1px solid #a7f3d0; color: #064e3b; }
+        .res-orange { background-color: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; }
+        
+        .result-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1rem; }
+        .highlight { font-weight: 800; font-size: 1.1rem; }
+        .error-msg { color: #dc2626; background-color: #fef2f2; padding: 10px; border-radius: 8px; margin-top: 10px; text-align: center; display: none; font-size: 0.9rem; }
+        
+        .source-toggle { display: flex; gap: 16px; margin-bottom: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .radio-label { display: flex; align-items: center; gap: 6px; font-weight: normal; cursor: pointer; margin: 0; }
+        .liquid-panel { background-color: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; margin-bottom: 16px; }
+        
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 10px; }
+        th { text-align: left; background-color: #f1f5f9; padding: 8px; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn" data-target="liquid" onclick="switchTab('liquid')">💧 常规稀释</button>
+        <button class="tab-btn" data-target="solid" onclick="switchTab('solid')">🧂 固体配液</button>
+        <button class="tab-btn active" data-target="element" onclick="switchTab('element')">🎯 元素换算</button>
+        <button class="tab-btn" data-target="guide" onclick="switchTab('guide')">📖 速查</button>
+    </div>
+
+    <div id="tab-liquid" class="tab-content">
+        <h2 style="color:var(--primary-color); margin-top:0;">常规溶液稀释</h2>
+        <div class="input-group">
+            <label>1. 原液浓度</label>
+            <div class="input-wrapper">
+                <input type="number" id="l_stockConc" placeholder="例如: 10">
+                <select id="l_stockUnit"><option value="M">M</option><option value="mM">mM</option><option value="mg/L">mg/L</option><option value="%">%</option></select>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>2. 目标体积</label>
+            <div class="input-wrapper">
+                <input type="number" id="l_targetVol" placeholder="例如: 100">
+                <select id="l_targetVolUnit"><option value="1">L</option><option value="0.001" selected>mL</option></select>
+            </div>
+        </div>
+        <div class="input-group">
+            <label>3. 目标浓度</label>
+            <div class="input-wrapper">
+                <input type="number" id="l_targetConc" placeholder="例如: 1">
+                <select id="l_targetUnit"><option value="M">M</option><option value="mM">mM</option><option value="mg/L">mg/L</option><option value="%">%</option></select>
+            </div>
+        </div>
+        <button class="btn btn-blue" onclick="calcDilution()">计算方案</button>
+        <div id="l_error" class="error-msg"></div>
+        <div id="l_result" class="result-box res-blue">
+            <div class="result-row"><span>取原液:</span><span class="highlight" id="res_v1">--</span></div>
+            <div class="result-row"><span>加溶剂:</span><span class="highlight" id="res_solvent">--</span></div>
+        </div>
+    </div>
+
+    <div id="tab-solid" class="tab-content">
+        <h2 style="color:var(--secondary-color); margin-top:0;">固体直接配液</h2>
+        <div class="input-group">
+            <label>1. 目标浓度</label>
+            <div class="input-wrapper">
+                <input type="number" id="s_conc" placeholder="浓度值" oninput="checkMW()">
+                <select id="s_concUnit" onchange="checkMW()"><option value="M">M</option><option value="mM">mM</option><option value="mg/L">mg/L</option><option value="%">%</option></select>
+            </div>
+        </div>
+        <div id="mw_group" style="display:none; margin-bottom:16px;">
+            <label>💊 溶质分子量 (MW)</label>
+            <input type="number" id="s_mw" placeholder="例如 NaCl 是 58.44" style="width:100%;">
+        </div>
+        <div class="input-group">
+            <label>2. 目标体积</label>
+            <div class="input-wrapper">
+                <input type="number" id="s_vol" placeholder="体积值">
+                <select id="s_volUnit"><option value="1">L</option><option value="0.001" selected>mL</option></select>
+            </div>
+        </div>
+        <button class="btn btn-green" onclick="calcSolid()">计算称量质量</button>
+        <div id="s_error" class="error-msg"></div>
+        <div id="s_result" class="result-box res-green">
+            <div class="result-row"><span>称取固体:</span><span class="highlight" id="res_mass">--</span></div>
+            <div class="result-row"><span>定容至:</span><span class="highlight" id="res_totalVol">--</span></div>
+        </div>
+    </div>
+
+    <div id="tab-element" class="tab-content active">
+        <h2 style="color:var(--element-color); margin-top:0;">特定元素/指标配制</h2>
+        
+        <div class="source-toggle">
+            <label class="radio-label">
+                <input type="radio" name="e_source" value="solid" checked onchange="toggleESource()"> ⚖️ 称取干粉配制
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="e_source" value="liquid" onchange="toggleESource()"> 💧 用化合物原液稀释
+            </label>
+        </div>
+
+        <div class="input-group">
+            <label>1. 目标元素 (原子量)</label>
+            <div class="input-wrapper">
+                <select id="e_element" onchange="checkCustomElem()" style="flex: 2;">
+                    <option value="14.01">氮 (N) - 14.01</option>
+                    <option value="30.97">磷 (P) - 30.97</option>
+                    <option value="12.01">碳 (C) - 12.01</option>
+                    <option value="32.06">硫 (S) - 32.06</option>
+                    <option value="39.10">钾 (K) - 39.10</option>
+                    <option value="22.99">钠 (Na) - 22.99</option>
+                    <option value="40.08">钙 (Ca) - 40.08</option>
+                    <option value="24.31">镁 (Mg) - 24.31</option>
+                    <option value="55.85">铁 (Fe) - 55.85</option>
+                    <option value="custom">⚙️ 手动输入原子量...</option>
+                </select>
+            </div>
+            <input type="number" id="e_aw_custom" style="display:none; margin-top:8px; width:100%; box-sizing:border-box;" placeholder="输入目标元素原子量">
+        </div>
+
+        <div class="input-group">
+            <label>2. 目标元素浓度 (例如 N 浓度)</label>
+            <div class="input-wrapper">
+                <input type="number" id="e_targetConc" placeholder="例如: 0.5">
+                <select id="e_targetUnit">
+                    <option value="mg/L">mg/L (ppm)</option>
+                    <option value="g/L">g/L</option>
+                    <option value="ug/L">µg/L (ppb)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>3. 目标溶液体积</label>
+            <div class="input-wrapper">
+                <input type="number" id="e_vol" placeholder="例如: 1">
+                <select id="e_volUnit"><option value="1" selected>L</option><option value="0.001">mL</option></select>
+            </div>
+        </div>
+
+        <div style="padding-top: 12px; border-top: 1px solid var(--border-color);">
+            <div class="input-group">
+                <label style="color:#0f172a">💊 所用化合物 分子量</label>
+                <div class="input-wrapper">
+                    <input type="number" id="e_mw" placeholder="例如 NH₄Cl 是 53.49">
+                </div>
+            </div>
+
+            <div id="e_liquid_panel" class="liquid-panel" style="display:none;">
+                <label style="color:#0f172a; margin-bottom:4px;">💧 原液(化合物) 实际浓度</label>
+                <div style="font-size:0.8rem; color:#64748b; margin-bottom:8px;">例如: 瓶子上标的氯化铵浓度是 1.5 mg/L</div>
+                <div class="input-wrapper">
+                    <input type="number" id="e_stockConc" placeholder="例如: 1.5">
+                    <select id="e_stockUnit">
+                        <option value="mg/L">mg/L</option>
+                        <option value="g/L">g/L</option>
+                        <option value="M">M</option>
+                        <option value="mM">mM</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-orange" onclick="calcElement()">计算配制方案</button>
+        <div id="e_error" class="error-msg"></div>
+
+        <div id="e_result" class="result-box res-orange"></div>
+    </div>
+
+    <div id="tab-guide" class="tab-content">
+        <h2 style="color:var(--tertiary-color); margin-top:0;">单位速查指南</h2>
+        <table>
+            <thead><tr><th width="30%">如果我有</th><th width="40%">换算公式</th><th width="30%">等于</th></tr></thead>
+            <tbody>
+                <tr><td><strong>1 %</strong></td><td>1g / 100mL</td><td><strong>10 g/L (10000 mg/L)</strong></td></tr>
+                <tr><td><strong>1 mg/L</strong></td><td>1mg / 1L</td><td><strong>1 ppm</strong></td></tr>
+                <tr><td><strong>1 M</strong></td><td>1 mol / L</td><td><strong>1000 mM</strong></td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // === 通用格式化 ===
+    function formatVol(liters) {
+        if (liters === 0) return "0";
+        if (liters < 1e-6) return (liters * 1e9).toFixed(2) + " nL";
+        if (liters < 1e-3) return (liters * 1e6).toFixed(2) + " µL";
+        if (liters < 1) return (liters * 1e3).toFixed(2) + " mL";
+        return liters.toFixed(4) + " L";
+    }
+
+    function formatMass(grams) {
+        if (grams === 0) return "0";
+        if (grams < 1e-3) return (grams * 1e6).toFixed(2) + " µg";
+        if (grams < 1) return (grams * 1e3).toFixed(2) + " mg";
+        if (grams > 1000) return (grams / 1000).toFixed(4) + " kg";
+        return grams.toFixed(4) + " g";
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-content, .tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tabName).classList.add('active');
+        document.querySelector(`.tab-btn[data-target="${tabName}"]`).classList.add('active');
+    }
+
+    function showErr(id, msg) {
+        const el = document.getElementById(id);
+        el.innerHTML = msg;
+        el.style.display = 'block';
+    }
+
+    // === 稀释逻辑 ===
+    function calcDilution() {
+        const err = document.getElementById('l_error');
+        const res = document.getElementById('l_result');
+        err.style.display = 'none'; res.style.display = 'none';
+
+        const sC = parseFloat(document.getElementById('l_stockConc').value);
+        const sU = document.getElementById('l_stockUnit').value;
+        const tV = parseFloat(document.getElementById('l_targetVol').value);
+        const tVF = parseFloat(document.getElementById('l_targetVolUnit').value);
+        const tC = parseFloat(document.getElementById('l_targetConc').value);
+        const tU = document.getElementById('l_targetUnit').value;
+
+        if (isNaN(sC) || isNaN(tV) || isNaN(tC)) return showErr('l_error', '请填写完整数据');
+
+        const isMolar = u => ['M', 'mM'].includes(u);
+        if (isMolar(sU) !== isMolar(tU) && sU !== 'X' && tU !== 'X') {
+            return showErr('l_error', '单位不兼容，请统一使用摩尔浓度或质量浓度');
+        }
+
+        const factors = { 'M': 1, 'mM': 1e-3, 'mg/L': 1, '%': 10000, 'X': 1 };
+        const c1 = sC * factors[sU];
+        const c2 = tC * factors[tU];
+        const v2 = tV * tVF; 
+
+        if (c2 > c1) return showErr('l_error', '目标浓度不能高于原液浓度（无法稀释）');
+
+        const v1 = (c2 * v2) / c1;
+        document.getElementById('res_v1').innerText = formatVol(v1);
+        document.getElementById('res_solvent').innerText = formatVol(v2 - v1);
+        res.style.display = 'block';
+    }
+
+    // === 固体逻辑 ===
+    function checkMW() {
+        const unit = document.getElementById('s_concUnit').value;
+        document.getElementById('mw_group').style.display = ['M', 'mM'].includes(unit) ? 'block' : 'none';
+    }
+
+    function calcSolid() {
+        const err = document.getElementById('s_error');
+        const res = document.getElementById('s_result');
+        err.style.display = 'none'; res.style.display = 'none';
+
+        const conc = parseFloat(document.getElementById('s_conc').value);
+        const unit = document.getElementById('s_concUnit').value;
+        const vol = parseFloat(document.getElementById('s_vol').value);
+        const volF = parseFloat(document.getElementById('s_volUnit').value);
+        const mw = parseFloat(document.getElementById('s_mw').value);
+
+        if (isNaN(conc) || isNaN(vol)) return showErr('s_error', '请填写浓度和体积');
+
+        const volL = vol * volF;
+        let mass = 0;
+
+        if (unit === 'M' || unit === 'mM') {
+            if (isNaN(mw)) return showErr('s_error', '摩尔浓度必须填写分子量');
+            const molarity = (unit === 'M') ? conc : conc / 1000;
+            mass = molarity * volL * mw; // grams
+        } else if (unit === 'mg/L') {
+            mass = (conc * volL) / 1000; // grams
+        } else if (unit === '%') {
+            mass = (conc * 10) * volL; // grams
+        }
+
+        document.getElementById('res_mass').innerText = formatMass(mass);
+        document.getElementById('res_totalVol').innerText = `${vol} ${document.getElementById('s_volUnit').options[document.getElementById('s_volUnit').selectedIndex].text}`;
+        res.style.display = 'block';
+    }
+
+    // === 元素逻辑 ===
+    function checkCustomElem() {
+        const val = document.getElementById('e_element').value;
+        document.getElementById('e_aw_custom').style.display = (val === 'custom') ? 'block' : 'none';
+    }
+
+    function toggleESource() {
+        const isLiquid = document.querySelector('input[name="e_source"]:checked').value === 'liquid';
+        document.getElementById('e_liquid_panel').style.display = isLiquid ? 'block' : 'none';
+    }
+
+    function getElemMassMg(conc, unit, volL) {
+        if (unit === 'mg/L') return conc * volL;
+        if (unit === 'g/L') return conc * 1000 * volL;
+        if (unit === 'ug/L') return (conc / 1000) * volL;
+        return 0;
+    }
+
+    function getCompStockConcMgL(conc, unit, mw) {
+        if (unit === 'mg/L') return conc;
+        if (unit === 'g/L') return conc * 1000;
+        if (unit === 'M') return conc * mw * 1000;
+        if (unit === 'mM') return conc * mw;
+        return 0;
+    }
+
+    function calcElement() {
+        const err = document.getElementById('e_error');
+        const resBox = document.getElementById('e_result');
+        err.style.display = 'none'; resBox.style.display = 'none';
+
+        const eSelect = document.getElementById('e_element').value;
+        const aw = eSelect === 'custom' ? parseFloat(document.getElementById('e_aw_custom').value) : parseFloat(eSelect);
+        const tConc = parseFloat(document.getElementById('e_targetConc').value);
+        const tUnit = document.getElementById('e_targetUnit').value;
+        const vol = parseFloat(document.getElementById('e_vol').value);
+        const volF = parseFloat(document.getElementById('e_volUnit').value);
+        const mw = parseFloat(document.getElementById('e_mw').value);
+        const isLiquid = document.querySelector('input[name="e_source"]:checked').value === 'liquid';
+
+        if (!aw || isNaN(tConc) || isNaN(vol) || isNaN(mw)) {
+            return showErr('e_error', '请填写完整：原子量、浓度、体积和分子量');
+        }
+
+        const volL = vol * volF; 
+        const targetElemMg = getElemMassMg(tConc, tUnit, volL);
+        const targetCompMg = targetElemMg * (mw / aw);
+        const targetCompGrams = targetCompMg / 1000;
+        const volText = `${vol} ${document.getElementById('e_volUnit').options[document.getElementById('e_volUnit').selectedIndex].text}`;
+
+        if (!isLiquid) {
+            resBox.innerHTML = `
+                <div class="result-row"><span>称取化合物干粉:</span><span class="highlight">${formatMass(targetCompGrams)}</span></div>
+                <div class="result-row"><span>加溶剂:</span><span class="highlight">定容至 ${volText}</span></div>
+            `;
+            resBox.style.display = 'block';
+        } else {
+            const sConc = parseFloat(document.getElementById('e_stockConc').value);
+            const sUnit = document.getElementById('e_stockUnit').value;
+            
+            if (isNaN(sConc)) return showErr('e_error', '请填写原液浓度');
+
+            const stockCompMgL = getCompStockConcMgL(sConc, sUnit, mw);
+            const stockVolL = targetCompMg / stockCompMgL;
+
+            if (stockVolL > volL) {
+                return showErr('e_error', `错误：原液浓度过低！<br>为达到目标浓度，需要加入 ${formatVol(stockVolL)} 原液，这已经超过了目标总体积 ${volText}。请使用更高浓度的原液。`);
+            }
+
+            const solventVolL = volL - stockVolL;
+
+            resBox.innerHTML = `
+                <div style="font-size:0.85rem; color:#9a3412; margin-bottom:8px; border-bottom:1px solid #fed7aa; padding-bottom:4px;">
+                    💡 原液中含目标元素实际浓度: ${formatMass(stockCompMgL * (aw/mw) / 1000)}/L
+                </div>
+                <div class="result-row"><span>取原液:</span><span class="highlight">${formatVol(stockVolL)}</span></div>
+                <div class="result-row"><span>加溶剂:</span><span class="highlight">${formatVol(solventVolL)}</span></div>
+            `;
+            resBox.style.display = 'block';
+        }
+    }
+</script>
+<script>
+    if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+</script>
+</body>
+</html>
